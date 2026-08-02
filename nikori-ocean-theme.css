@@ -1,0 +1,315 @@
+/* nikori-ocean-theme.css */
+/* ニコリタイピング：海ポップテーマ */
+
+/* 全体カラー */
+:root {
+  --bg1: #dffaff;
+  --bg2: #8be8ff;
+  --bg3: #00a8d8;
+  --text: #07344d;
+  --muted: #4f7486;
+  --line: rgba(0, 105, 150, 0.18);
+  --accent: #00a8d8;
+  --accent2: #ffe06e;
+  --good: #19c37d;
+  --danger: #ff5d73;
+  --shadow: 0 18px 48px rgba(0, 87, 130, 0.18);
+}
+
+/* 背景：海っぽい爽やかポップ */
+body {
+  color: var(--text);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 224, 110, 0.40), transparent 22%),
+    radial-gradient(circle at 84% 14%, rgba(255, 255, 255, 0.78), transparent 18%),
+    linear-gradient(180deg, #f5fdff 0%, var(--bg1) 30%, var(--bg2) 70%, #46cbe8 100%);
+}
+
+/* 既存の星背景を、泡＋波の印象に変更 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.85) 0 2px, transparent 2.6px),
+    radial-gradient(circle, rgba(0,168,216,.22) 0 3px, transparent 3.8px),
+    linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,.20) 46% 54%, transparent 55%);
+  background-size: 120px 120px, 180px 180px, 280px 280px;
+  background-position: 0 0, 60px 80px, 0 0;
+  animation: oceanBubbles 26s linear infinite;
+  opacity: .58;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  left: -8%;
+  right: -8%;
+  bottom: -90px;
+  height: 230px;
+  pointer-events: none;
+  background:
+    radial-gradient(120px 54px at 10% 22%, rgba(255,255,255,.50) 0 62%, transparent 64%),
+    radial-gradient(140px 58px at 28% 18%, rgba(255,255,255,.38) 0 62%, transparent 64%),
+    radial-gradient(150px 64px at 48% 22%, rgba(255,255,255,.45) 0 62%, transparent 64%),
+    radial-gradient(140px 58px at 68% 18%, rgba(255,255,255,.38) 0 62%, transparent 64%),
+    radial-gradient(160px 66px at 88% 22%, rgba(255,255,255,.48) 0 62%, transparent 64%),
+    linear-gradient(180deg, rgba(0,168,216,.10), rgba(0,168,216,.26));
+  animation: oceanWave 8s ease-in-out infinite alternate;
+  opacity: .9;
+}
+
+@keyframes oceanBubbles {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(120px);
+  }
+}
+
+@keyframes oceanWave {
+  from {
+    transform: translateX(-18px) translateY(0);
+  }
+  to {
+    transform: translateX(18px) translateY(-8px);
+  }
+}
+
+/* ニコリヒトを背景にうっすら配置 */
+.app::after {
+  content: "";
+  position: fixed;
+  right: 22px;
+  bottom: 20px;
+  width: min(160px, 26vw);
+  height: min(160px, 26vw);
+  background: url("./ニコリヒト.png") center / contain no-repeat;
+  opacity: .16;
+  filter: drop-shadow(0 18px 28px rgba(0, 85, 130, .28));
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* タイトル */
+h1 {
+  color: #06354f;
+  text-shadow: none;
+  letter-spacing: .05em;
+}
+
+h1::after {
+  content: "";
+  display: block;
+  width: 120px;
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #4dddf2, var(--accent2));
+}
+
+.lead {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+/* カード系 */
+.panel,
+.card,
+.account-card,
+.settings-panel,
+.mode-card,
+.map-card,
+.world-card,
+.hud-card,
+.stage,
+.speech-stage,
+.keyboard-guide,
+.time-gauge-box,
+.login-existing-box,
+.pill {
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.58)),
+    radial-gradient(circle at 20% 0%, rgba(0,168,216,.14), transparent 36%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+/* モードカード */
+.mode-card {
+  overflow: hidden;
+}
+
+.mode-card::before {
+  content: "";
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: -42px;
+  height: 90px;
+  background:
+    radial-gradient(70px 30px at 10% 70%, rgba(0,168,216,.18) 0 64%, transparent 66%),
+    radial-gradient(82px 36px at 30% 66%, rgba(0,168,216,.14) 0 64%, transparent 66%),
+    radial-gradient(88px 38px at 52% 70%, rgba(0,168,216,.16) 0 64%, transparent 66%),
+    radial-gradient(78px 34px at 74% 66%, rgba(0,168,216,.14) 0 64%, transparent 66%);
+  pointer-events: none;
+}
+
+.mode-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(0, 168, 216, .48);
+  box-shadow: 0 24px 56px rgba(0, 122, 170, .22);
+}
+
+.mode-icon,
+.account-icon,
+.title-area .icon {
+  background:
+    linear-gradient(135deg, rgba(0,168,216,.18), rgba(255,224,110,.35));
+  border: 1px solid rgba(0, 140, 190, .18);
+  box-shadow: inset 0 -4px 0 rgba(0, 120, 170, .08);
+}
+
+/* ログイン画面のアイコンにニコリヒトを表示 */
+.title-area .icon {
+  background:
+    url("./ニコリヒト.png") center / 82% no-repeat,
+    linear-gradient(135deg, rgba(0,168,216,.18), rgba(255,224,110,.35));
+}
+
+/* ボタン */
+button,
+.button-link {
+  color: #06354f;
+  background: linear-gradient(135deg, #23c7ec 0%, #8be8ff 52%, #ffe06e 100%);
+  box-shadow: 0 12px 26px rgba(0, 122, 170, .22);
+}
+
+button:hover,
+.button-link:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+}
+
+button.secondary,
+.button-link.secondary,
+.settings-button,
+.settings-close-button {
+  color: var(--text);
+  background: rgba(255,255,255,.62);
+  border: 1px solid rgba(0, 120, 170, .18);
+}
+
+.danger-button {
+  color: #fff;
+  background: linear-gradient(135deg, #ff5d73, #ff91a2);
+}
+
+/* 設定画面 */
+.settings-backdrop {
+  background: rgba(0, 80, 120, .22);
+  backdrop-filter: blur(6px);
+}
+
+.settings-panel {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.94), rgba(236,250,255,.92));
+}
+
+/* 入力・表示エリア */
+.stage {
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255,224,110,.18), transparent 28%),
+    linear-gradient(180deg, rgba(255,255,255,.74), rgba(219,249,255,.60));
+}
+
+.castle {
+  color: transparent;
+  width: 120px;
+  height: 120px;
+  background: url("./ニコリヒト.png") center / contain no-repeat;
+  opacity: .18;
+  filter: drop-shadow(0 12px 20px rgba(0, 120, 170, .30));
+}
+
+.jp-word {
+  color: #052e45;
+  text-shadow: none;
+}
+
+.roma-word {
+  color: #06354f;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(0, 120, 170, .18);
+}
+
+.typed {
+  color: var(--good);
+}
+
+.current {
+  color: #008fbd;
+}
+
+.remaining {
+  color: #06354f;
+}
+
+/* 時間ゲージ */
+.time-gauge {
+  background: rgba(0, 120, 170, .10);
+}
+
+.time-gauge > div {
+  background: linear-gradient(90deg, #19c37d, #23c7ec, #ffe06e);
+}
+
+/* キーボード */
+.key {
+  color: #06354f;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(0, 120, 170, .18);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 120, 170, .10),
+    0 6px 12px rgba(0, 120, 170, .08);
+}
+
+.key.active,
+.key.next,
+.key.highlight {
+  color: #062f45;
+  background: linear-gradient(135deg, #8be8ff, #ffe06e);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 120, 170, .16),
+    0 0 0 4px rgba(0, 168, 216, .16);
+}
+
+/* タグ・チップ */
+.tag,
+.lesson-chip,
+.selected-genre-chip {
+  color: #06354f;
+  background: rgba(255,224,110,.42);
+  border: 1px solid rgba(255, 200, 40, .28);
+}
+
+/* スマホ調整 */
+@media (max-width: 760px) {
+  .app::after {
+    opacity: .10;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  h1::after {
+    width: 88px;
+  }
+
+  .mode-card {
+    min-height: auto;
+  }
+}

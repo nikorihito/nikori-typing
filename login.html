@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ログイン - ニコリタイピング</title>
+  <style>
+    :root {
+      --bg: #e8fbff;
+      --bg2: #b6f2ff;
+      --blue: #00a8d8;
+      --blue2: #23c7ec;
+      --aqua: #58e6f2;
+      --yellow: #ffe06e;
+      --navy: #06354f;
+      --muted: #52788a;
+      --line: rgba(0, 118, 165, .18);
+      --white: rgba(255,255,255,.76);
+      --shadow: 0 22px 60px rgba(0, 100, 145, .18);
+      --danger: #ff5d73;
+      --good: #16a66f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, system-ui, sans-serif;
+      color: var(--navy);
+      background:
+        radial-gradient(circle at 18% 16%, rgba(255, 224, 110, .38), transparent 20%),
+        radial-gradient(circle at 82% 12%, rgba(255,255,255,.85), transparent 18%),
+        linear-gradient(180deg, #f7feff 0%, var(--bg) 36%, var(--bg2) 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.95) 0 2px, transparent 2.7px),
+        radial-gradient(circle, rgba(0,168,216,.24) 0 3px, transparent 3.8px);
+      background-size: 120px 120px, 180px 180px;
+      background-position: 0 0, 52px 76px;
+      animation: bubbles 26s linear infinite;
+      opacity: .58;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      left: -10%;
+      right: -10%;
+      bottom: -96px;
+      height: 245px;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .9;
+      background:
+        radial-gradient(130px 58px at 8% 22%, rgba(255,255,255,.54) 0 62%, transparent 64%),
+        radial-gradient(150px 64px at 28% 18%, rgba(255,255,255,.38) 0 62%, transparent 64%),
+        radial-gradient(160px 68px at 50% 22%, rgba(255,255,255,.48) 0 62%, transparent 64%),
+        radial-gradient(150px 64px at 72% 18%, rgba(255,255,255,.38) 0 62%, transparent 64%),
+        radial-gradient(170px 72px at 92% 22%, rgba(255,255,255,.50) 0 62%, transparent 64%),
+        linear-gradient(180deg, rgba(0,168,216,.08), rgba(0,168,216,.24));
+      animation: wave 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes bubbles {
+      from { transform: translateY(0); }
+      to { transform: translateY(120px); }
+    }
+
+    @keyframes wave {
+      from { transform: translateX(-18px) translateY(0); }
+      to { transform: translateX(18px) translateY(-8px); }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(620px, calc(100% - 28px));
+      min-height: 100vh;
+      margin: 0 auto;
+      display: grid;
+      align-items: center;
+      padding: 32px 0 48px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 32px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.64)),
+        radial-gradient(circle at 18% 0%, rgba(0,168,216,.14), transparent 34%);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.45), transparent 28%),
+        radial-gradient(circle at 88% 8%, rgba(255,224,110,.30), transparent 20%);
+    }
+
+    .card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .title-area {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .brand-icon {
+      width: 86px;
+      height: 86px;
+      margin: 0 auto 14px;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      border: 1px solid rgba(0, 140, 190, .20);
+      background:
+        url("./ニコリヒト.png") center / 80% no-repeat,
+        linear-gradient(135deg, rgba(0,168,216,.18), rgba(255,224,110,.38));
+      box-shadow:
+        inset 0 -5px 0 rgba(0,120,170,.08),
+        0 16px 32px rgba(0,100,145,.16);
+    }
+
+    .brand-icon::after {
+      content: "NT";
+      color: rgba(6,53,79,.28);
+      font-weight: 1000;
+      font-size: 20px;
+      letter-spacing: .06em;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 7vw, 52px);
+      letter-spacing: .06em;
+      line-height: 1.15;
+    }
+
+    .lead {
+      margin: 12px auto 0;
+      color: var(--muted);
+      font-weight: 800;
+      line-height: 1.8;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      letter-spacing: .03em;
+    }
+
+    .box {
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.56);
+      box-shadow: 0 12px 26px rgba(0, 100, 145, .08);
+    }
+
+    .box + .box,
+    .box + .error,
+    .error + .box,
+    .status + .box {
+      margin-top: 16px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    label {
+      display: block;
+      margin: 13px 0 7px;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid rgba(0, 118, 165, .22);
+      border-radius: 18px;
+      background: rgba(255,255,255,.78);
+      color: var(--navy);
+      padding: 14px 15px;
+      font-size: 16px;
+      font-weight: 800;
+      outline: none;
+      box-shadow: inset 0 0 0 999px transparent;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    input:focus {
+      border-color: rgba(0, 168, 216, .70);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(0, 168, 216, .12);
+    }
+
+    .hint {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      font-weight: 700;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button,
+    .button-link {
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      color: var(--navy);
+      background: linear-gradient(135deg, var(--blue2) 0%, var(--aqua) 54%, var(--yellow) 100%);
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 1000;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 13px 26px rgba(0, 122, 170, .20);
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+    }
+
+    button:hover,
+    .button-link:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.03);
+      box-shadow: 0 18px 34px rgba(0, 122, 170, .24);
+    }
+
+    button.secondary,
+    .button-link.secondary {
+      background: rgba(255,255,255,.68);
+      border: 1px solid rgba(0, 118, 165, .18);
+      box-shadow: none;
+    }
+
+    button.danger {
+      color: #fff;
+      background: linear-gradient(135deg, var(--danger), #ff90a1);
+      box-shadow: 0 12px 24px rgba(255, 93, 115, .18);
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+      box-shadow: none;
+    }
+
+    .quick-icons {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .quick-icons button {
+      min-height: 45px;
+      padding: 8px 0;
+      border-radius: 16px;
+      font-size: 20px;
+      background: rgba(255,255,255,.65);
+      box-shadow: none;
+    }
+
+    .create-form-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .create-form-wrap.open {
+      display: block;
+    }
+
+    .error {
+      display: none;
+      padding: 12px 14px;
+      border-radius: 18px;
+      color: #9f2035;
+      background: rgba(255, 93, 115, .12);
+      border: 1px solid rgba(255, 93, 115, .22);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.7;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--good);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.6;
+    }
+
+    .footer-note {
+      margin: 18px 0 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+      font-weight: 700;
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        width: min(100% - 18px, 620px);
+        align-items: start;
+        padding-top: 14px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 26px;
+      }
+
+      .input-row,
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-icons {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="card" aria-label="ログイン">
+      <div class="title-area">
+        <div class="brand-icon" aria-hidden="true"></div>
+        <h1>ニコリタイピング</h1>
+        <p class="lead">タイピングを、もっと楽しく。ログインIDを入力して練習を始めましょう。</p>
+      </div>
+
+      <div class="box">
+        <h2>ログインID</h2>
+        <p id="existingAccountText">アカウント情報を確認しています。</p>
+
+        <label for="loginIdInput">ログインID</label>
+        <input id="loginIdInput" maxlength="24" autocomplete="username" placeholder="アカウントIDを入力" />
+        <div class="hint">登録済みのアカウントIDを入力してください。</div>
+
+        <div class="actions">
+          <button type="button" id="loginBtn">ログインして始める</button>
+          <button type="button" class="secondary" id="guestLoginBtn">ゲストとして始める</button>
+        </div>
+      </div>
+
+      <div class="error" id="errorBox"></div>
+      <div class="status" id="statusText"></div>
+
+      <div class="box">
+        <h2>アカウント作成・編集</h2>
+        <p>この端末に、名前・ID・アイコンを保存します。サーバー認証ではありません。</p>
+
+        <button type="button" class="secondary" id="openCreateFormBtn">アカウントを作成する</button>
+
+        <div class="create-form-wrap" id="createFormWrap">
+          <form id="accountForm">
+            <div class="input-row">
+              <div>
+                <label for="emojiInput">アイコン</label>
+                <input id="emojiInput" maxlength="4" autocomplete="off" placeholder="例：⌨️" />
+              </div>
+              <div>
+                <label for="nameInput">名前</label>
+                <input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="例：こっぴー" />
+              </div>
+            </div>
+
+            <div class="quick-icons" aria-label="アイコン候補">
+              <button type="button" data-emoji="⌨️">⌨️</button>
+              <button type="button" data-emoji="🌊">🌊</button>
+              <button type="button" data-emoji="💻">💻</button>
+              <button type="button" data-emoji="⭐">⭐</button>
+              <button type="button" data-emoji="🚀">🚀</button>
+              <button type="button" data-emoji="🐬">🐬</button>
+            </div>
+
+            <label for="idInput">アカウントID</label>
+            <input id="idInput" maxlength="24" autocomplete="username" placeholder="例：koppy001" />
+            <div class="hint">使える文字：英小文字・数字・ハイフン・アンダーバー。大文字や記号は自動整形します。</div>
+
+            <div class="actions">
+              <button type="submit">保存してタイピングへ</button>
+              <div class="split">
+                <button type="button" class="secondary" id="saveOnlyBtn">保存だけする</button>
+                <button type="button" class="secondary" id="generateIdBtn">ID自動生成</button>
+              </div>
+              <div class="split">
+                <a class="button-link secondary" href="./typing.html">タイピングへ戻る</a>
+                <button type="button" class="danger" id="resetAccountBtn">アカウントをリセット</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <p class="footer-note">保存先はこのブラウザの localStorage です。別端末には自動同期されません。</p>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const ACCOUNT_KEY = "typingAcademiaAccount";
+    const SESSION_KEY = "typingAcademiaLoggedIn";
+
+    const el = {
+      form: document.getElementById("accountForm"),
+      emojiInput: document.getElementById("emojiInput"),
+      nameInput: document.getElementById("nameInput"),
+      idInput: document.getElementById("idInput"),
+      loginIdInput: document.getElementById("loginIdInput"),
+      loginBtn: document.getElementById("loginBtn"),
+      guestLoginBtn: document.getElementById("guestLoginBtn"),
+      errorBox: document.getElementById("errorBox"),
+      statusText: document.getElementById("statusText"),
+      saveOnlyBtn: document.getElementById("saveOnlyBtn"),
+      generateIdBtn: document.getElementById("generateIdBtn"),
+      resetAccountBtn: document.getElementById("resetAccountBtn"),
+      openCreateFormBtn: document.getElementById("openCreateFormBtn"),
+      createFormWrap: document.getElementById("createFormWrap"),
+      existingAccountText: document.getElementById("existingAccountText")
+    };
+
+    let account = loadAccount();
+
+    function createDefaultAccount() {
+      return { id: "", name: "ゲスト", emoji: "⌨️" };
+    }
+
+    function loadAccount() {
+      try {
+        const raw = localStorage.getItem(ACCOUNT_KEY);
+        if (!raw) return createDefaultAccount();
+        const saved = JSON.parse(raw);
+        return {
+          id: sanitizeAccountId(saved.id || ""),
+          name: sanitizeName(saved.name || "ゲスト"),
+          emoji: normalizeEmoji(saved.emoji || "⌨️")
+        };
+      } catch {
+        return createDefaultAccount();
+      }
+    }
+
+    function saveAccount(nextAccount) {
+      localStorage.setItem(ACCOUNT_KEY, JSON.stringify(nextAccount));
+      account = nextAccount;
+      renderAccount();
+    }
+
+    function loginWithAccount(nextAccount) {
+      saveAccount(nextAccount);
+      localStorage.setItem(SESSION_KEY, "1");
+      window.location.href = "./typing.html";
+    }
+
+    function sanitizeAccountId(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, "")
+        .slice(0, 24);
+    }
+
+    function sanitizeName(value) {
+      return String(value || "ゲスト").trim().slice(0, 20) || "ゲスト";
+    }
+
+    function normalizeEmoji(value) {
+      const text = String(value || "").trim();
+      return [...text][0] || "⌨️";
+    }
+
+    function buildAccountFromForm() {
+      return {
+        id: sanitizeAccountId(el.idInput.value),
+        name: sanitizeName(el.nameInput.value),
+        emoji: normalizeEmoji(el.emojiInput.value)
+      };
+    }
+
+    function validateAccount(nextAccount) {
+      if (!nextAccount.name) return "名前を入力してください。";
+      if (!nextAccount.id) return "アカウントIDを入力してください。";
+      if (nextAccount.id.length < 3) return "アカウントIDは3文字以上にしてください。";
+      if (!/^[a-z0-9_-]+$/.test(nextAccount.id)) return "アカウントIDに使えない文字があります。";
+      return "";
+    }
+
+    function setError(message) {
+      el.errorBox.textContent = message;
+      el.errorBox.classList.toggle("show", !!message);
+    }
+
+    function setStatus(message) {
+      el.statusText.textContent = message;
+      if (!message) return;
+      window.setTimeout(() => {
+        if (el.statusText.textContent === message) el.statusText.textContent = "";
+      }, 2200);
+    }
+
+    function renderAccount() {
+      el.emojiInput.value = account.emoji || "⌨️";
+      el.nameInput.value = account.name || "ゲスト";
+      el.idInput.value = account.id || "";
+      renderExistingAccount();
+    }
+
+    function renderExistingAccount() {
+      const saved = localStorage.getItem(ACCOUNT_KEY);
+      if (!saved || !account.id) {
+        el.existingAccountText.textContent = "まだアカウントがありません。下のフォームで作成するか、ゲストとして始めてください。";
+        el.loginBtn.disabled = true;
+        el.loginIdInput.value = "";
+        el.loginIdInput.placeholder = "先にアカウントを作成してください";
+        return;
+      }
+
+      el.loginBtn.disabled = false;
+      el.loginIdInput.placeholder = "アカウントIDを入力";
+      el.existingAccountText.textContent = `保存済みアカウント：${account.emoji || "⌨️"} ${account.name} / ID: ${account.id}`;
+    }
+
+    function handleLogin() {
+      if (!localStorage.getItem(ACCOUNT_KEY) || !account.id) {
+        setError("アカウントがありません。先にアカウントを作成するか、ゲストとして始めてください。");
+        return;
+      }
+
+      const inputId = sanitizeAccountId(el.loginIdInput.value.trim());
+      if (!inputId) {
+        setError("ログインIDを入力してください。");
+        return;
+      }
+
+      if (inputId !== account.id) {
+        setError("ログインIDが一致しません。登録したアカウントIDを入力してください。");
+        return;
+      }
+
+      setError("");
+      localStorage.setItem(SESSION_KEY, "1");
+      window.location.href = "./typing.html";
+    }
+
+    function handleGuestLogin() {
+      loginWithAccount({ id: "guest", name: "ゲスト", emoji: "⌨️" });
+    }
+
+    function handleSave({ redirect = false } = {}) {
+      const nextAccount = buildAccountFromForm();
+      const error = validateAccount(nextAccount);
+      if (error) {
+        setError(error);
+        return false;
+      }
+
+      setError("");
+      if (redirect) {
+        loginWithAccount(nextAccount);
+        return true;
+      }
+
+      saveAccount(nextAccount);
+      el.createFormWrap.classList.remove("open");
+      el.openCreateFormBtn.textContent = "アカウントを編集する";
+      setStatus("保存しました。");
+      return true;
+    }
+
+    function resetAccount() {
+      if (!confirm("アカウント情報とログイン状態をリセットします。よろしいですか？")) return;
+      localStorage.removeItem(ACCOUNT_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      account = createDefaultAccount();
+      setError("");
+      renderAccount();
+      el.createFormWrap.classList.remove("open");
+      el.openCreateFormBtn.textContent = "アカウントを作成する";
+      setStatus("アカウントをリセットしました。");
+    }
+
+    el.loginBtn.addEventListener("click", handleLogin);
+    el.guestLoginBtn.addEventListener("click", handleGuestLogin);
+    el.loginIdInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") handleLogin();
+    });
+
+    el.openCreateFormBtn.addEventListener("click", () => {
+      el.createFormWrap.classList.toggle("open");
+      el.openCreateFormBtn.textContent = el.createFormWrap.classList.contains("open")
+        ? "作成フォームを閉じる"
+        : (localStorage.getItem(ACCOUNT_KEY) ? "アカウントを編集する" : "アカウントを作成する");
+    });
+
+    el.form.addEventListener("submit", event => {
+      event.preventDefault();
+      handleSave({ redirect: true });
+    });
+
+    el.saveOnlyBtn.addEventListener("click", () => handleSave({ redirect: false }));
+
+    el.generateIdBtn.addEventListener("click", () => {
+      el.idInput.value = "user-" + Math.random().toString(36).slice(2, 8);
+      setStatus("新しいIDを生成しました。保存すると反映されます。");
+    });
+
+    el.resetAccountBtn.addEventListener("click", resetAccount);
+
+    document.querySelectorAll("[data-emoji]").forEach(button => {
+      button.addEventListener("click", () => {
+        el.emojiInput.value = button.dataset.emoji;
+      });
+    });
+
+    el.idInput.addEventListener("input", () => {
+      const pos = el.idInput.selectionStart;
+      el.idInput.value = sanitizeAccountId(el.idInput.value);
+      try { el.idInput.setSelectionRange(pos, pos); } catch {}
+    });
+
+    if (localStorage.getItem(ACCOUNT_KEY)) {
+      el.openCreateFormBtn.textContent = "アカウントを編集する";
+    }
+
+    renderAccount();
+  </script>
+</body>
+</html>
