@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // アカウントIDをそのままドキュメントIDとして使う簡易設計です。
+    // ログインはパスワードなしの「IDを知っていれば入れる」方式のため、
+    // ここでは「匿名ログインを含むFirebase認証をしていること」だけを
+    // 必須条件にしています。誰でも作れる匿名認証なので強い保護には
+    // なりません。個人情報や機微なデータは保存しないでください。
+    match /accounts/{accountId} {
+      allow read, write: if request.auth != null
+        && accountId is string
+        && accountId.size() > 0
+        && accountId.size() <= 24;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

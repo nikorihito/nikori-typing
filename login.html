@@ -376,6 +376,11 @@
       }
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script>
+  <script src="./firebase.js"></script>
 </head>
 <body>
   <main class="app">
@@ -507,8 +512,17 @@
 
     function loginWithAccount(nextAccount) {
       saveAccount(nextAccount);
+      syncAccountToCloud(nextAccount);
       localStorage.setItem(SESSION_KEY, "1");
       window.location.href = "./typing.html";
+    }
+
+    function syncAccountToCloud(nextAccount) {
+      if (!window.NikoriCloud || !nextAccount.id || nextAccount.id === "guest") return;
+      window.NikoriCloud.pushAccountData(nextAccount.id, {
+        name: nextAccount.name,
+        emoji: nextAccount.emoji
+      });
     }
 
     function sanitizeAccountId(value) {
@@ -566,38 +580,49 @@
     function renderExistingAccount() {
       const saved = localStorage.getItem(ACCOUNT_KEY);
       if (!saved || !account.id) {
-        el.existingAccountText.textContent = "まだアカウントがありません。下のフォームで作成するか、ゲストとして始めてください。";
-        el.loginBtn.disabled = true;
+        el.existingAccountText.textContent = "まだアカウントがありません。下のフォームで作成するか、クラウドに保存済みのIDでログインしてください。";
         el.loginIdInput.value = "";
-        el.loginIdInput.placeholder = "先にアカウントを作成してください";
+        el.loginIdInput.placeholder = "アカウントIDを入力";
         return;
       }
 
-      el.loginBtn.disabled = false;
       el.loginIdInput.placeholder = "アカウントIDを入力";
       el.existingAccountText.textContent = `保存済みアカウント：${account.emoji || "⌨️"} ${account.name} / ID: ${account.id}`;
     }
 
-    function handleLogin() {
-      if (!localStorage.getItem(ACCOUNT_KEY) || !account.id) {
-        setError("アカウントがありません。先にアカウントを作成するか、ゲストとして始めてください。");
-        return;
-      }
-
+    async function handleLogin() {
       const inputId = sanitizeAccountId(el.loginIdInput.value.trim());
       if (!inputId) {
         setError("ログインIDを入力してください。");
         return;
       }
 
-      if (inputId !== account.id) {
-        setError("ログインIDが一致しません。登録したアカウントIDを入力してください。");
+      if (localStorage.getItem(ACCOUNT_KEY) && account.id && inputId === account.id) {
+        setError("");
+        localStorage.setItem(SESSION_KEY, "1");
+        window.location.href = "./typing.html";
         return;
       }
 
       setError("");
-      localStorage.setItem(SESSION_KEY, "1");
-      window.location.href = "./typing.html";
+      el.loginBtn.disabled = true;
+      setStatus("アカウントを確認しています…");
+
+      const cloudData = window.NikoriCloud ? await window.NikoriCloud.pullAccountData(inputId) : null;
+
+      el.loginBtn.disabled = false;
+      setStatus("");
+
+      if (cloudData) {
+        loginWithAccount({
+          id: inputId,
+          name: sanitizeName(cloudData.name || "ゲスト"),
+          emoji: normalizeEmoji(cloudData.emoji || "⌨️")
+        });
+        return;
+      }
+
+      setError("ログインIDが見つかりません。登録したアカウントIDを入力するか、新規作成してください。");
     }
 
     function handleGuestLogin() {
@@ -619,6 +644,7 @@
       }
 
       saveAccount(nextAccount);
+      syncAccountToCloud(nextAccount);
       el.createFormWrap.classList.remove("open");
       el.openCreateFormBtn.textContent = "アカウントを編集する";
       setStatus("保存しました。");
