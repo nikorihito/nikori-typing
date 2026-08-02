@@ -1030,6 +1030,11 @@
       }
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script>
+  <script src="./firebase.js"></script>
 </head>
 <body>
   <main class="app">
@@ -1278,8 +1283,10 @@
 
       <div class="game-actions">
         <button type="button" id="saveSettingsButton">設定を保存する</button>
+        <button type="button" class="secondary" id="cloudRestoreButton">クラウドから復元する</button>
         <button type="button" class="danger" id="resetDataButton">全てをリセットする</button>
       </div>
+      <p class="lead" id="cloudSyncStatus">クラウド同期：進捗を保存すると自動的にアップロードされます。</p>
     </section>
   </div>
 
@@ -1745,6 +1752,8 @@
       kanaOnButton: document.getElementById("kanaOnButton"),
       kanaOffButton: document.getElementById("kanaOffButton"),
       saveSettingsButton: document.getElementById("saveSettingsButton"),
+      cloudRestoreButton: document.getElementById("cloudRestoreButton"),
+      cloudSyncStatus: document.getElementById("cloudSyncStatus"),
       resetDataButton: document.getElementById("resetDataButton"),
       resultBackdrop: document.getElementById("resultBackdrop"),
       resultCloseButton: document.getElementById("resultCloseButton"),
@@ -1806,14 +1815,69 @@
 
     function saveRecord() {
       localStorage.setItem(RECORD_KEY, JSON.stringify(state.record));
+      syncToCloud();
     }
 
     function saveLevelRecord() {
       localStorage.setItem(LEVEL_RECORD_KEY, JSON.stringify(state.levelRecord));
+      syncToCloud();
     }
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+      syncToCloud();
+    }
+
+    function syncToCloud() {
+      if (!window.NikoriCloud) return;
+      window.NikoriCloud.pushAccountData(state.account.id, {
+        name: state.account.name,
+        emoji: state.account.emoji,
+        record: state.record,
+        levelRecord: state.levelRecord,
+        settings: state.settings
+      });
+    }
+
+    async function restoreFromCloud() {
+      if (!window.NikoriCloud || !state.account.id || state.account.id === "guest") {
+        el.cloudSyncStatus.textContent = "クラウド同期：ゲストアカウントではクラウド復元はできません。";
+        return;
+      }
+      el.cloudRestoreButton.disabled = true;
+      el.cloudSyncStatus.textContent = "クラウドから読み込んでいます…";
+
+      const cloudData = await window.NikoriCloud.pullAccountData(state.account.id);
+
+      el.cloudRestoreButton.disabled = false;
+
+      if (!cloudData) {
+        el.cloudSyncStatus.textContent = "クラウド同期：このアカウントのクラウドデータが見つかりませんでした。";
+        return;
+      }
+
+      if (cloudData.record) {
+        state.record = { bestScore: 0, exp: 0, level: 1, ...cloudData.record };
+        localStorage.setItem(RECORD_KEY, JSON.stringify(state.record));
+      }
+      if (cloudData.levelRecord) {
+        state.levelRecord = {
+          unlockedMap: Math.min(9, Math.max(0, Number(cloudData.levelRecord.unlockedMap || 0))),
+          completed: Array.from({ length: 10 }, (_, mi) =>
+            Array.from({ length: 10 }, (_, wi) => !!(cloudData.levelRecord.completed && cloudData.levelRecord.completed[mi] && cloudData.levelRecord.completed[mi][wi]))
+          )
+        };
+        localStorage.setItem(LEVEL_RECORD_KEY, JSON.stringify(state.levelRecord));
+      }
+      if (cloudData.settings) {
+        state.settings = { lang: "ja", keyboard: true, kana: true, ...cloudData.settings };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+      }
+
+      updateMeta();
+      updateQuestList();
+      if (el.levelMapScreen.classList.contains("active")) openLevelMap(state.selectedMap);
+      el.cloudSyncStatus.textContent = "クラウド同期：復元しました。";
     }
 
     function showScreen(name) {
@@ -3220,6 +3284,10 @@
     el.saveSettingsButton.addEventListener("click", () => {
       applySettingsNow();
       el.settingsBackdrop.classList.remove("open");
+    });
+
+    el.cloudRestoreButton.addEventListener("click", () => {
+      restoreFromCloud();
     });
 
     el.resetDataButton.addEventListener("click", () => {
