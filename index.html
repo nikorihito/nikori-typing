@@ -1030,13 +1030,77 @@
       }
     }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="./firebase-config.js"></script>
-  <script src="./firebase.js"></script>
+  <style>
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: linear-gradient(180deg, #f7feff 0%, var(--bg) 36%, var(--bg2) 100%);
+    }
+
+    .auth-overlay.hidden {
+      display: none;
+    }
+
+    .auth-overlay-card {
+      width: min(360px, 100%);
+      padding: 28px 30px;
+      border-radius: 28px;
+      text-align: center;
+      background: rgba(255,255,255,.88);
+      box-shadow: var(--shadow);
+    }
+
+    .auth-overlay-card p {
+      color: var(--navy);
+      font-weight: 900;
+      line-height: 1.8;
+    }
+
+    .auth-overlay-card button {
+      margin-top: 16px;
+    }
+
+    body.auth-pending .app {
+      visibility: hidden;
+    }
+  </style>
 </head>
-<body>
+<body class="auth-pending">
+  <div class="auth-overlay" id="authOverlay" role="status" aria-live="polite">
+    <div class="auth-overlay-card">
+      <p id="authOverlayText">ログイン状態を確認しています…</p>
+      <button type="button" class="secondary hidden" id="authRetryButton">再読み込み</button>
+    </div>
+  </div>
+
+  <script>
+    // Firebase SDK自体の読み込み（CDN）が失敗・タイムアウトした場合、
+    // 下の type="module" スクリプトは実行すら始まらないことがあります。
+    // それでも「読み込み中」のまま固まらないよう、依存関係の無い監視タイマーを別途仕込みます。
+    (function () {
+      "use strict";
+      var ready = false;
+      window.__nikoriMarkAuthReady = function () { ready = true; };
+      var retryBtn = document.getElementById("authRetryButton");
+      if (retryBtn) {
+        retryBtn.addEventListener("click", function () { window.location.reload(); });
+      }
+      window.setTimeout(function () {
+        if (ready) return;
+        var overlay = document.getElementById("authOverlay");
+        var text = document.getElementById("authOverlayText");
+        if (overlay) overlay.classList.remove("hidden");
+        if (text) text.textContent = "読み込みに失敗しました。通信環境をご確認のうえ、再読み込みしてください。";
+        if (retryBtn) retryBtn.classList.remove("hidden");
+        document.body.classList.add("auth-pending");
+      }, 12000);
+    })();
+  </script>
+
   <main class="app">
     <header>
       <div>
@@ -1044,9 +1108,8 @@
         <p class="lead">タイピングを、もっと楽しく。海みたいに明るく、リズムよく練習しよう。</p>
       </div>
       <div class="top-actions">
-        <div class="account-pill" id="accountPill">⌨️ ゲスト / ID: guest</div>
+        <div class="account-pill" id="accountPill">⌨️ ユーザー</div>
         <button type="button" class="secondary" id="settingsButton">設定</button>
-        <a class="button-link secondary" href="./login.html">ログイン・編集</a>
         <button type="button" class="secondary" id="logoutButton">ログアウト</button>
       </div>
     </header>
@@ -1283,10 +1346,9 @@
 
       <div class="game-actions">
         <button type="button" id="saveSettingsButton">設定を保存する</button>
-        <button type="button" class="secondary" id="cloudRestoreButton">クラウドから復元する</button>
         <button type="button" class="danger" id="resetDataButton">全てをリセットする</button>
       </div>
-      <p class="lead" id="cloudSyncStatus">クラウド同期：進捗を保存すると自動的にアップロードされます。</p>
+      <p class="lead" id="cloudSyncStatus" role="status" aria-live="polite">クラウド同期：進捗を保存すると自動的にアップロードされます。</p>
     </section>
   </div>
 
@@ -1313,11 +1375,25 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
     "use strict";
 
-    const ACCOUNT_KEY = "typingAcademiaAccount";
-    const SESSION_KEY = "typingAcademiaLoggedIn";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { auth } from "./firebase-config.js";
+    import {
+      getUserDocument,
+      touchLastLogin,
+      saveSettings as saveSettingsRemote,
+      loadAllProgress,
+      saveProgress as saveProgressRemote,
+      buildLevelRecordFromProgress,
+      worldIdOf,
+      saveResult as saveResultRemote,
+      queuePendingResult,
+      flushPendingResults,
+      migrateLocalStorageIfNeeded
+    } from "./firestore-service.js";
+
     const RECORD_KEY = "nikoriTypingRecord";
     const LEVEL_RECORD_KEY = "nikoriTypingLevelRecord";
     const SETTINGS_KEY = "nikoriTypingSettings";
@@ -1686,10 +1762,16 @@
       bestCombo: 0,
       worldGoal: 8,
       introIndex: 0,
-      adviceIndex: 0
+      adviceIndex: 0,
+      startedAt: 0,
+      keyMistakes: {},
+      progressCache: {}
     };
 
     const el = {
+      authOverlay: document.getElementById("authOverlay"),
+      authOverlayText: document.getElementById("authOverlayText"),
+      authRetryButton: document.getElementById("authRetryButton"),
       accountPill: document.getElementById("accountPill"),
       settingsButton: document.getElementById("settingsButton"),
       logoutButton: document.getElementById("logoutButton"),
@@ -1752,7 +1834,6 @@
       kanaOnButton: document.getElementById("kanaOnButton"),
       kanaOffButton: document.getElementById("kanaOffButton"),
       saveSettingsButton: document.getElementById("saveSettingsButton"),
-      cloudRestoreButton: document.getElementById("cloudRestoreButton"),
       cloudSyncStatus: document.getElementById("cloudSyncStatus"),
       resetDataButton: document.getElementById("resetDataButton"),
       resultBackdrop: document.getElementById("resultBackdrop"),
@@ -1774,14 +1855,9 @@
     ];
 
     function loadAccount() {
-      try {
-        const raw = localStorage.getItem(ACCOUNT_KEY);
-        if (!raw) return { id: "guest", name: "ゲスト", emoji: "⌨️" };
-        const saved = JSON.parse(raw);
-        return { id: saved.id || "guest", name: saved.name || "ゲスト", emoji: saved.emoji || "⌨️" };
-      } catch {
-        return { id: "guest", name: "ゲスト", emoji: "⌨️" };
-      }
+      // Firebase Authenticationのログインユーザーが確定するまでの仮の値。
+      // initializeTypingGame(user) で実際のuid・表示名・アイコンに置き換わります。
+      return { uid: "", name: "ユーザー", emoji: "⌨️" };
     }
 
     function loadSettings() {
@@ -1813,71 +1889,68 @@
       }
     }
 
+    // record / levelRecord はlocalStorageへローカルキャッシュとして保存します
+    // （オフライン時や次回起動を高速化するため）。Firestoreへの実際の反映は、
+    // ワールドクリア時の saveWorldProgress() とプレイ結果保存の persistResult() で行います。
     function saveRecord() {
       localStorage.setItem(RECORD_KEY, JSON.stringify(state.record));
-      syncToCloud();
     }
 
     function saveLevelRecord() {
       localStorage.setItem(LEVEL_RECORD_KEY, JSON.stringify(state.levelRecord));
-      syncToCloud();
     }
 
     function saveSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
-      syncToCloud();
+      if (state.account.uid) {
+        saveSettingsRemote(state.account.uid, state.settings).catch(err => {
+          console.warn("設定のクラウド保存に失敗しました。", err);
+        });
+      }
     }
 
-    function syncToCloud() {
-      if (!window.NikoriCloud) return;
-      window.NikoriCloud.pushAccountData(state.account.id, {
-        name: state.account.name,
-        emoji: state.account.emoji,
-        record: state.record,
-        levelRecord: state.levelRecord,
-        settings: state.settings
-      });
+    function setSyncStatus(text) {
+      if (el.cloudSyncStatus) el.cloudSyncStatus.textContent = text;
     }
 
-    async function restoreFromCloud() {
-      if (!window.NikoriCloud || !state.account.id || state.account.id === "guest") {
-        el.cloudSyncStatus.textContent = "クラウド同期：ゲストアカウントではクラウド復元はできません。";
-        return;
-      }
-      el.cloudRestoreButton.disabled = true;
-      el.cloudSyncStatus.textContent = "クラウドから読み込んでいます…";
+    // ワールドクリア時などに、そのワールドのFirestore進捗ドキュメントを更新します。
+    async function saveWorldProgress(mapIndex, worldIndex, { accuracy, kpm, wpm, success }) {
+      if (!state.account.uid) return;
+      const worldId = worldIdOf(mapIndex, worldIndex);
+      const prev = state.progressCache[worldId] || {};
+      const patch = {
+        isUnlocked: true,
+        isCleared: success || !!prev.isCleared,
+        bestScore: Math.max(prev.bestScore || 0, state.score),
+        bestAccuracy: Math.max(prev.bestAccuracy || 0, accuracy),
+        bestKpm: Math.max(prev.bestKpm || 0, kpm),
+        bestWpm: Math.max(prev.bestWpm || 0, wpm),
+        attemptCount: (prev.attemptCount || 0) + 1,
+        clearCount: (prev.clearCount || 0) + (success ? 1 : 0),
+        lastPlayedAt: new Date()
+      };
+      state.progressCache[worldId] = { ...prev, ...patch, worldId, mapId: mapIndex };
 
-      const cloudData = await window.NikoriCloud.pullAccountData(state.account.id);
-
-      el.cloudRestoreButton.disabled = false;
-
-      if (!cloudData) {
-        el.cloudSyncStatus.textContent = "クラウド同期：このアカウントのクラウドデータが見つかりませんでした。";
-        return;
+      try {
+        await saveProgressRemote(state.account.uid, mapIndex, worldIndex, patch);
+      } catch (err) {
+        console.warn("進捗のクラウド保存に失敗しました。", err);
       }
+    }
 
-      if (cloudData.record) {
-        state.record = { bestScore: 0, exp: 0, level: 1, ...cloudData.record };
-        localStorage.setItem(RECORD_KEY, JSON.stringify(state.record));
+    // 1プレイごとの結果をFirestoreへ保存します。失敗時はオフラインキューへ退避し、
+    // ゲーム進行そのものは止めません。
+    async function persistResult(resultPayload) {
+      if (!state.account.uid) return;
+      setSyncStatus("保存中…");
+      try {
+        await saveResultRemote(state.account.uid, resultPayload);
+        setSyncStatus("保存済み");
+      } catch (err) {
+        console.warn("結果の保存に失敗しました。オフラインとして一時保存します。", err);
+        queuePendingResult(resultPayload);
+        setSyncStatus(navigator.onLine ? "同期に失敗しました" : "オフラインで一時保存中");
       }
-      if (cloudData.levelRecord) {
-        state.levelRecord = {
-          unlockedMap: Math.min(9, Math.max(0, Number(cloudData.levelRecord.unlockedMap || 0))),
-          completed: Array.from({ length: 10 }, (_, mi) =>
-            Array.from({ length: 10 }, (_, wi) => !!(cloudData.levelRecord.completed && cloudData.levelRecord.completed[mi] && cloudData.levelRecord.completed[mi][wi]))
-          )
-        };
-        localStorage.setItem(LEVEL_RECORD_KEY, JSON.stringify(state.levelRecord));
-      }
-      if (cloudData.settings) {
-        state.settings = { lang: "ja", keyboard: true, kana: true, ...cloudData.settings };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
-      }
-
-      updateMeta();
-      updateQuestList();
-      if (el.levelMapScreen.classList.contains("active")) openLevelMap(state.selectedMap);
-      el.cloudSyncStatus.textContent = "クラウド同期：復元しました。";
     }
 
     function showScreen(name) {
@@ -2134,6 +2207,8 @@
       state.typed = "";
       state.current = null;
       state.targets = [];
+      state.startedAt = 0;
+      state.keyMistakes = {};
     }
 
     function getWordPool() {
@@ -2165,6 +2240,7 @@
 
       state.running = true;
       state.paused = false;
+      state.startedAt = Date.now();
       if (state.mode === "normal") state.timeLeft = 60;
       if (state.mode === "endless") state.timeLeft = 10;
       if (state.mode === "level" && state.levelKind === "skip") state.timeLeft = 60;
@@ -2295,6 +2371,8 @@
           handleCorrectWord();
         }
       } else {
+        const expectedChar = (bestDisplayTarget()[state.typed.length] || key).toLowerCase();
+        state.keyMistakes[expectedChar] = (state.keyMistakes[expectedChar] || 0) + 1;
         state.mistakes++;
         state.combo = 0;
         if (state.mode === "endless") state.timeLeft = Math.max(0, state.timeLeft - 1.5);
@@ -2339,6 +2417,11 @@
       state.record.bestScore = Math.max(state.record.bestScore, state.score);
       saveRecord();
 
+      const playTimeMs = state.startedAt ? Math.max(0, Date.now() - state.startedAt) : 0;
+      const minutes = Math.max(playTimeMs / 60000, 1 / 60);
+      const kpm = Math.round(state.typedCount / minutes) || 0;
+      const wpm = Math.round(state.correctWords / minutes) || 0;
+
       let message = `EXP +${earnedExp}。${state.correctWords}問正解しました。`;
 
       if (state.mode === "level" && state.levelKind === "world") {
@@ -2352,6 +2435,7 @@
         } else {
           message = "あと少しです。正確率80%以上を目指して、もう一度挑戦しましょう。";
         }
+        saveWorldProgress(state.selectedMap, state.selectedWorld, { accuracy, kpm, wpm, success });
       }
 
       if (state.mode === "level" && state.levelKind === "skip") {
@@ -2362,6 +2446,23 @@
           message = "飛び級テストは未合格です。8問正解・正確率80%以上を目指しましょう。";
         }
       }
+
+      persistResult({
+        mode: state.mode,
+        worldId: state.mode === "level" && state.levelKind === "world" ? worldIdOf(state.selectedMap, state.selectedWorld) : "",
+        score: state.score,
+        accuracy,
+        correctKeys: state.typedCount,
+        mistakeKeys: state.mistakes,
+        totalKeys: state.typedCount + state.mistakes,
+        kpm,
+        wpm,
+        maxCombo: state.bestCombo,
+        playTime: playTimeMs,
+        keyMistakes: { ...state.keyMistakes },
+        startedAt: state.startedAt ? new Date(state.startedAt) : new Date(),
+        finishedAt: new Date()
+      });
 
       el.resultScore.textContent = state.score;
       el.resultAccuracy.textContent = accuracy + "%";
@@ -2413,7 +2514,7 @@
       syncRubyVisibility();
       scheduleRubies();
       const account = state.account;
-      el.accountPill.textContent = `${account.emoji || "⌨️"} ${account.name || "ゲスト"} / ID: ${account.id || "guest"}`;
+      el.accountPill.textContent = `${account.emoji || "⌨️"} ${account.name || "ユーザー"}`;
       el.levelText.textContent = `レベル ${state.record.level} / EXP ${state.record.exp}`;
       el.bestText.textContent = `最高スコア ${state.record.bestScore}`;
 
@@ -3286,10 +3387,6 @@
       el.settingsBackdrop.classList.remove("open");
     });
 
-    el.cloudRestoreButton.addEventListener("click", () => {
-      restoreFromCloud();
-    });
-
     el.resetDataButton.addEventListener("click", () => {
       if (!confirm("最高スコア・EXP・レベル・レベルアップ進行をすべてリセットします。よろしいですか？")) return;
       state.record = { bestScore: 0, exp: 0, level: 1 };
@@ -3301,8 +3398,14 @@
       if (el.levelMapScreen.classList.contains("active")) openLevelMap(0);
     });
 
-    el.logoutButton.addEventListener("click", () => {
-      localStorage.removeItem(SESSION_KEY);
+    el.logoutButton.addEventListener("click", async () => {
+      if (!confirm("ログアウトします。よろしいですか？")) return;
+      el.logoutButton.disabled = true;
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.warn("ログアウトに失敗しました。", err);
+      }
       window.location.href = "./login.html";
     });
 
@@ -3324,11 +3427,121 @@
       returnFromGame();
     });
 
-    document.addEventListener("keydown", handleKey);
+    // ---------------------------------------------------------------------
+    // 認証ガード：Firebaseのログイン状態が確定するまでゲーム画面を表示しません
+    // ---------------------------------------------------------------------
 
-    setupRubyObserver();
-    updateMeta();
-    updateQuestList();
+    function showAuthOverlay(message, { showRetry = false } = {}) {
+      document.body.classList.add("auth-pending");
+      el.authOverlay.classList.remove("hidden");
+      el.authOverlayText.textContent = message;
+      el.authRetryButton.classList.toggle("hidden", !showRetry);
+    }
+
+    function hideAuthOverlay() {
+      document.body.classList.remove("auth-pending");
+      el.authOverlay.classList.add("hidden");
+    }
+
+    el.authRetryButton.addEventListener("click", () => window.location.reload());
+
+    async function initializeTypingGame(user) {
+      state.account = { uid: user.uid, name: "ユーザー", emoji: "⌨️" };
+
+      try {
+        const [userDoc, progressByWorldId] = await Promise.all([
+          getUserDocument(user.uid),
+          loadAllProgress(user.uid)
+        ]);
+
+        if (userDoc) {
+          state.account.name = userDoc.displayName || "ユーザー";
+          state.account.emoji = userDoc.avatarEmoji || "⌨️";
+          if (userDoc.settings) {
+            state.settings = { lang: "ja", keyboard: true, kana: true, ...userDoc.settings };
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+          }
+        }
+
+        state.progressCache = progressByWorldId || {};
+        if (Object.keys(state.progressCache).length > 0) {
+          state.levelRecord = buildLevelRecordFromProgress(state.progressCache);
+          saveLevelRecord();
+        }
+
+        touchLastLogin(user.uid).catch(() => {});
+        migrateLocalStorageIfNeeded(user.uid)
+          .then(async result => {
+            if (result && result.migrated) {
+              // 移行直後は進捗を読み直して画面に反映する
+              state.progressCache = await loadAllProgress(user.uid);
+              state.levelRecord = buildLevelRecordFromProgress(state.progressCache);
+              saveLevelRecord();
+              updateMeta();
+              updateQuestList();
+              if (el.levelMapScreen.classList.contains("active")) openLevelMap(state.selectedMap);
+            }
+          })
+          .catch(err => console.warn("localStorageからの移行に失敗しました。", err));
+
+        if (navigator.onLine) {
+          flushPendingResults(user.uid, ({ remaining }) => {
+            if (remaining === 0) setSyncStatus("再同期しました");
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn("Firestoreからの読み込みに失敗しました。ローカルの記録で続行します。", err);
+        setSyncStatus("同期に失敗しました");
+      }
+
+      hideAuthOverlay();
+      document.addEventListener("keydown", handleKey);
+      setupRubyObserver();
+      updateMeta();
+      updateQuestList();
+    }
+
+    window.addEventListener("online", () => {
+      if (!state.account.uid) return;
+      setSyncStatus("再同期しています…");
+      flushPendingResults(state.account.uid)
+        .then(({ sent, remaining }) => {
+          if (remaining === 0) setSyncStatus(sent > 0 ? "再同期しました" : "保存済み");
+          else setSyncStatus("同期に失敗しました");
+        })
+        .catch(() => setSyncStatus("同期に失敗しました"));
+    });
+
+    window.addEventListener("offline", () => setSyncStatus("オフラインで一時保存中"));
+
+    // モジュール読み込みに成功しここまで実行が到達したことを、body側の監視タイマーへ知らせます
+    // （CDN読み込み失敗など、モジュール自体が実行できないケースはbody側のタイマーが引き続き検知します）。
+    function markAuthReady() {
+      if (window.__nikoriMarkAuthReady) window.__nikoriMarkAuthReady();
+    }
+
+    try {
+      onAuthStateChanged(
+        auth,
+        user => {
+          markAuthReady();
+          if (!user) {
+            window.location.replace("./login.html");
+            return;
+          }
+          initializeTypingGame(user);
+        },
+        error => {
+          markAuthReady();
+          console.error("認証状態の確認に失敗しました。", error);
+          showAuthOverlay("ログイン状態の確認に失敗しました。", { showRetry: true });
+        }
+      );
+    } catch (err) {
+      markAuthReady();
+      console.error("Firebaseの初期化に失敗しました。", err);
+      showAuthOverlay("読み込みに失敗しました。", { showRetry: true });
+    }
   </script>
 </body>
 </html>

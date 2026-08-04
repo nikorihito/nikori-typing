@@ -1,20 +1,80 @@
 rules_version = '2';
 
 service cloud.firestore {
-  match /databases/{database}/documents {
+  function isSignedIn() {
+    return request.auth != null;
+  }
 
-    // アカウントIDをそのままドキュメントIDとして使う簡易設計です。
-    // ログインはパスワードなしの「IDを知っていれば入れる」方式のため、
-    // ここでは「匿名ログインを含むFirebase認証をしていること」だけを
-    // 必須条件にしています。誰でも作れる匿名認証なので強い保護には
-    // なりません。個人情報や機微なデータは保存しないでください。
-    match /accounts/{accountId} {
-      allow read, write: if request.auth != null
-        && accountId is string
-        && accountId.size() > 0
-        && accountId.size() <= 24;
+  function isOwner(userId) {
+    return isSignedIn() && request.auth.uid == userId;
+  }
+
+  // users/{userId} ドキュメント自体の型・サイズ検証
+  function isValidUserDoc(data) {
+    return data.uid is string && data.uid == request.auth.uid
+      && data.displayName is string && data.displayName.size() <= 40
+      && data.email is string && data.email.size() <= 254
+      && (!('avatarEmoji' in data) || (data.avatarEmoji is string && data.avatarEmoji.size() <= 8))
+      && (!('settings' in data) || data.settings is map)
+      && (!('migration' in data) || data.migration is map)
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp
+      && data.lastLoginAt is timestamp;
+  }
+
+  // users/{userId}/progress/{worldId} の型・範囲検証
+  function isValidProgressDoc(data) {
+    return data.worldId is string && data.worldId.size() <= 16
+      && data.mapId is number
+      && data.isUnlocked is bool
+      && data.isCleared is bool
+      && data.bestScore is number && data.bestScore >= 0 && data.bestScore <= 10000000
+      && data.bestAccuracy is number && data.bestAccuracy >= 0 && data.bestAccuracy <= 100
+      && data.bestKpm is number && data.bestKpm >= 0 && data.bestKpm <= 2000
+      && data.bestWpm is number && data.bestWpm >= 0 && data.bestWpm <= 1000
+      && data.attemptCount is number && data.attemptCount >= 0 && data.attemptCount <= 1000000
+      && data.clearCount is number && data.clearCount >= 0 && data.clearCount <= 1000000;
+  }
+
+  // users/{userId}/results/{resultId} の型・範囲検証（作成のみ許可）
+  function isValidResultDoc(data) {
+    return data.mode is string && data.mode.size() <= 20
+      && data.worldId is string && data.worldId.size() <= 16
+      && data.score is number && data.score >= 0 && data.score <= 10000000
+      && data.accuracy is number && data.accuracy >= 0 && data.accuracy <= 100
+      && data.correctKeys is number && data.correctKeys >= 0
+      && data.mistakeKeys is number && data.mistakeKeys >= 0
+      && data.totalKeys is number && data.totalKeys >= 0
+      && data.kpm is number && data.kpm >= 0 && data.kpm <= 2000
+      && data.wpm is number && data.wpm >= 0 && data.wpm <= 1000
+      && data.maxCombo is number && data.maxCombo >= 0
+      && data.playTime is number && data.playTime >= 0 && data.playTime <= 86400000
+      && data.keyMistakes is map
+      && data.startedAt is timestamp
+      && data.finishedAt is timestamp;
+  }
+
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserDoc(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserDoc(request.resource.data);
+      allow delete: if false;
+
+      match /progress/{worldId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidProgressDoc(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /results/{resultId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidResultDoc(request.resource.data);
+        allow update, delete: if false;
+      }
     }
 
+    // 上記以外のパスは一切アクセス不可
     match /{document=**} {
       allow read, write: if false;
     }

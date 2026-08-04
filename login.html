@@ -222,6 +222,13 @@
       box-shadow: 0 0 0 4px rgba(0, 168, 216, .12);
     }
 
+    input:focus-visible,
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid rgba(0, 168, 216, .85);
+      outline-offset: 2px;
+    }
+
     .hint {
       margin-top: 6px;
       color: var(--muted);
@@ -241,6 +248,20 @@
       grid-template-columns: 110px 1fr;
       gap: 12px;
       align-items: end;
+    }
+
+    .password-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .password-row .toggle-pass {
+      width: auto;
+      white-space: nowrap;
+      padding: 12px 14px;
+      font-size: 13px;
     }
 
     .actions {
@@ -311,13 +332,25 @@
       box-shadow: none;
     }
 
-    .create-form-wrap {
-      display: none;
-      margin-top: 14px;
+    .tab-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
     }
 
-    .create-form-wrap.open {
-      display: block;
+    .tab-switch .tab-btn {
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(0, 118, 165, .18);
+      box-shadow: none;
+    }
+
+    .tab-switch .tab-btn.active {
+      background: linear-gradient(135deg, var(--blue2) 0%, var(--aqua) 54%, var(--yellow) 100%);
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     .error {
@@ -367,7 +400,8 @@
       }
 
       .input-row,
-      .split {
+      .split,
+      .password-row {
         grid-template-columns: 1fr;
       }
 
@@ -375,12 +409,14 @@
         grid-template-columns: repeat(3, 1fr);
       }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      body::before,
+      body::after {
+        animation: none;
+      }
+    }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="./firebase-config.js"></script>
-  <script src="./firebase.js"></script>
 </head>
 <body>
   <main class="app">
@@ -388,174 +424,137 @@
       <div class="title-area">
         <div class="brand-icon" aria-hidden="true"></div>
         <h1>ニコリタイピング</h1>
-        <p class="lead">タイピングを、もっと楽しく。ログインIDを入力して練習を始めましょう。</p>
+        <p class="lead">タイピングを、もっと楽しく。メールアドレスでログインして練習を始めましょう。</p>
       </div>
 
-      <div class="box">
-        <h2>ログインID</h2>
-        <p id="existingAccountText">アカウント情報を確認しています。</p>
+      <div class="box" id="checkingBox">
+        <p id="checkingText">ログイン状態を確認しています…</p>
+      </div>
 
-        <label for="loginIdInput">ログインID</label>
-        <input id="loginIdInput" maxlength="24" autocomplete="username" placeholder="アカウントIDを入力" />
-        <div class="hint">登録済みのアカウントIDを入力してください。</div>
-
-        <div class="actions">
-          <button type="button" id="loginBtn">ログインして始める</button>
-          <button type="button" class="secondary" id="guestLoginBtn">ゲストとして始める</button>
+      <div id="authArea" class="hidden">
+        <div class="tab-switch" role="tablist">
+          <button type="button" class="tab-btn active" id="tabLoginBtn" role="tab" aria-selected="true" aria-controls="loginForm">ログイン</button>
+          <button type="button" class="tab-btn" id="tabSignupBtn" role="tab" aria-selected="false" aria-controls="signupForm">新規登録</button>
         </div>
+
+        <form id="loginForm" class="box" novalidate>
+          <h2>ログイン</h2>
+
+          <label for="loginEmail">メールアドレス</label>
+          <input id="loginEmail" type="email" autocomplete="email" required placeholder="example@mail.com" />
+
+          <label for="loginPassword">パスワード</label>
+          <div class="password-row">
+            <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="パスワード" />
+            <button type="button" class="secondary toggle-pass" data-target="loginPassword" aria-label="パスワードの表示切り替え">表示</button>
+          </div>
+
+          <div class="actions">
+            <button type="submit" id="loginSubmitBtn">ログイン</button>
+            <button type="button" class="secondary" id="forgotPasswordBtn">パスワードをお忘れですか？</button>
+          </div>
+        </form>
+
+        <form id="signupForm" class="box hidden" novalidate>
+          <h2>新規登録</h2>
+          <p>ニックネームとアイコンは、タイピング画面に表示される名前になります。</p>
+
+          <div class="input-row">
+            <div>
+              <label for="signupEmoji">アイコン</label>
+              <input id="signupEmoji" maxlength="4" autocomplete="off" placeholder="例：⌨️" />
+            </div>
+            <div>
+              <label for="signupName">ニックネーム</label>
+              <input id="signupName" maxlength="20" autocomplete="nickname" required placeholder="例：こっぴー" />
+            </div>
+          </div>
+
+          <div class="quick-icons" aria-label="アイコン候補">
+            <button type="button" data-emoji="⌨️">⌨️</button>
+            <button type="button" data-emoji="🌊">🌊</button>
+            <button type="button" data-emoji="💻">💻</button>
+            <button type="button" data-emoji="⭐">⭐</button>
+            <button type="button" data-emoji="🚀">🚀</button>
+            <button type="button" data-emoji="🐬">🐬</button>
+          </div>
+
+          <label for="signupEmail">メールアドレス</label>
+          <input id="signupEmail" type="email" autocomplete="email" required placeholder="example@mail.com" />
+
+          <label for="signupPassword">パスワード</label>
+          <div class="password-row">
+            <input id="signupPassword" type="password" autocomplete="new-password" required placeholder="6文字以上" />
+            <button type="button" class="secondary toggle-pass" data-target="signupPassword" aria-label="パスワードの表示切り替え">表示</button>
+          </div>
+          <div class="hint">パスワードは6文字以上で入力してください。</div>
+
+          <div class="actions">
+            <button type="submit" id="signupSubmitBtn">新規登録してはじめる</button>
+          </div>
+        </form>
+
+        <div class="error" id="errorBox" role="alert" aria-live="assertive"></div>
+        <div class="status" id="statusText" role="status" aria-live="polite"></div>
       </div>
 
-      <div class="error" id="errorBox"></div>
-      <div class="status" id="statusText"></div>
-
-      <div class="box">
-        <h2>アカウント作成・編集</h2>
-        <p>この端末に、名前・ID・アイコンを保存します。サーバー認証ではありません。</p>
-
-        <button type="button" class="secondary" id="openCreateFormBtn">アカウントを作成する</button>
-
-        <div class="create-form-wrap" id="createFormWrap">
-          <form id="accountForm">
-            <div class="input-row">
-              <div>
-                <label for="emojiInput">アイコン</label>
-                <input id="emojiInput" maxlength="4" autocomplete="off" placeholder="例：⌨️" />
-              </div>
-              <div>
-                <label for="nameInput">名前</label>
-                <input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="例：こっぴー" />
-              </div>
-            </div>
-
-            <div class="quick-icons" aria-label="アイコン候補">
-              <button type="button" data-emoji="⌨️">⌨️</button>
-              <button type="button" data-emoji="🌊">🌊</button>
-              <button type="button" data-emoji="💻">💻</button>
-              <button type="button" data-emoji="⭐">⭐</button>
-              <button type="button" data-emoji="🚀">🚀</button>
-              <button type="button" data-emoji="🐬">🐬</button>
-            </div>
-
-            <label for="idInput">アカウントID</label>
-            <input id="idInput" maxlength="24" autocomplete="username" placeholder="例：koppy001" />
-            <div class="hint">使える文字：英小文字・数字・ハイフン・アンダーバー。大文字や記号は自動整形します。</div>
-
-            <div class="actions">
-              <button type="submit">保存してタイピングへ</button>
-              <div class="split">
-                <button type="button" class="secondary" id="saveOnlyBtn">保存だけする</button>
-                <button type="button" class="secondary" id="generateIdBtn">ID自動生成</button>
-              </div>
-              <div class="split">
-                <a class="button-link secondary" href="./typing.html">タイピングへ戻る</a>
-                <button type="button" class="danger" id="resetAccountBtn">アカウントをリセット</button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <p class="footer-note">保存先はこのブラウザの localStorage です。別端末には自動同期されません。</p>
+      <p class="footer-note">メールアドレスは画面上に表示されません。タイピング画面ではニックネームが使われます。</p>
     </section>
   </main>
 
   <script>
+    // Firebase SDK自体の読み込み（CDN）が失敗・タイムアウトした場合、
+    // 下の type="module" スクリプトは実行すら始まらないことがあります。
+    // それでも「確認中」のまま固まらないよう、依存関係の無い監視タイマーを別途仕込みます。
+    (function () {
+      "use strict";
+      var ready = false;
+      window.__nikoriMarkAuthReady = function () { ready = true; };
+      window.setTimeout(function () {
+        if (ready) return;
+        var checkingP = document.querySelector("#checkingBox p");
+        if (checkingP) {
+          checkingP.textContent = "読み込みに失敗しました。通信環境をご確認のうえ、ページを再読み込みしてください。";
+        }
+      }, 12000);
+    })();
+  </script>
+
+  <script type="module">
     "use strict";
 
-    const ACCOUNT_KEY = "typingAcademiaAccount";
-    const SESSION_KEY = "typingAcademiaLoggedIn";
+    import {
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      sendPasswordResetEmail,
+      updateProfile
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { auth } from "./firebase-config.js";
+    import { mapAuthErrorToMessage } from "./firebase-errors.js";
+    import { createUserDocument, migrateLocalStorageIfNeeded } from "./firestore-service.js";
 
     const el = {
-      form: document.getElementById("accountForm"),
-      emojiInput: document.getElementById("emojiInput"),
-      nameInput: document.getElementById("nameInput"),
-      idInput: document.getElementById("idInput"),
-      loginIdInput: document.getElementById("loginIdInput"),
-      loginBtn: document.getElementById("loginBtn"),
-      guestLoginBtn: document.getElementById("guestLoginBtn"),
+      checkingBox: document.getElementById("checkingBox"),
+      authArea: document.getElementById("authArea"),
+      tabLoginBtn: document.getElementById("tabLoginBtn"),
+      tabSignupBtn: document.getElementById("tabSignupBtn"),
+      loginForm: document.getElementById("loginForm"),
+      signupForm: document.getElementById("signupForm"),
+      loginEmail: document.getElementById("loginEmail"),
+      loginPassword: document.getElementById("loginPassword"),
+      loginSubmitBtn: document.getElementById("loginSubmitBtn"),
+      forgotPasswordBtn: document.getElementById("forgotPasswordBtn"),
+      signupEmoji: document.getElementById("signupEmoji"),
+      signupName: document.getElementById("signupName"),
+      signupEmail: document.getElementById("signupEmail"),
+      signupPassword: document.getElementById("signupPassword"),
+      signupSubmitBtn: document.getElementById("signupSubmitBtn"),
       errorBox: document.getElementById("errorBox"),
-      statusText: document.getElementById("statusText"),
-      saveOnlyBtn: document.getElementById("saveOnlyBtn"),
-      generateIdBtn: document.getElementById("generateIdBtn"),
-      resetAccountBtn: document.getElementById("resetAccountBtn"),
-      openCreateFormBtn: document.getElementById("openCreateFormBtn"),
-      createFormWrap: document.getElementById("createFormWrap"),
-      existingAccountText: document.getElementById("existingAccountText")
+      statusText: document.getElementById("statusText")
     };
 
-    let account = loadAccount();
-
-    function createDefaultAccount() {
-      return { id: "", name: "ゲスト", emoji: "⌨️" };
-    }
-
-    function loadAccount() {
-      try {
-        const raw = localStorage.getItem(ACCOUNT_KEY);
-        if (!raw) return createDefaultAccount();
-        const saved = JSON.parse(raw);
-        return {
-          id: sanitizeAccountId(saved.id || ""),
-          name: sanitizeName(saved.name || "ゲスト"),
-          emoji: normalizeEmoji(saved.emoji || "⌨️")
-        };
-      } catch {
-        return createDefaultAccount();
-      }
-    }
-
-    function saveAccount(nextAccount) {
-      localStorage.setItem(ACCOUNT_KEY, JSON.stringify(nextAccount));
-      account = nextAccount;
-      renderAccount();
-    }
-
-    function loginWithAccount(nextAccount) {
-      saveAccount(nextAccount);
-      syncAccountToCloud(nextAccount);
-      localStorage.setItem(SESSION_KEY, "1");
-      window.location.href = "./typing.html";
-    }
-
-    function syncAccountToCloud(nextAccount) {
-      if (!window.NikoriCloud || !nextAccount.id || nextAccount.id === "guest") return;
-      window.NikoriCloud.pushAccountData(nextAccount.id, {
-        name: nextAccount.name,
-        emoji: nextAccount.emoji
-      });
-    }
-
-    function sanitizeAccountId(value) {
-      return String(value || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9_-]/g, "")
-        .slice(0, 24);
-    }
-
-    function sanitizeName(value) {
-      return String(value || "ゲスト").trim().slice(0, 20) || "ゲスト";
-    }
-
-    function normalizeEmoji(value) {
-      const text = String(value || "").trim();
-      return [...text][0] || "⌨️";
-    }
-
-    function buildAccountFromForm() {
-      return {
-        id: sanitizeAccountId(el.idInput.value),
-        name: sanitizeName(el.nameInput.value),
-        emoji: normalizeEmoji(el.emojiInput.value)
-      };
-    }
-
-    function validateAccount(nextAccount) {
-      if (!nextAccount.name) return "名前を入力してください。";
-      if (!nextAccount.id) return "アカウントIDを入力してください。";
-      if (nextAccount.id.length < 3) return "アカウントIDは3文字以上にしてください。";
-      if (!/^[a-z0-9_-]+$/.test(nextAccount.id)) return "アカウントIDに使えない文字があります。";
-      return "";
-    }
+    let submitting = false;
 
     function setError(message) {
       el.errorBox.textContent = message;
@@ -563,150 +562,191 @@
     }
 
     function setStatus(message) {
-      el.statusText.textContent = message;
-      if (!message) return;
-      window.setTimeout(() => {
-        if (el.statusText.textContent === message) el.statusText.textContent = "";
-      }, 2200);
+      el.statusText.textContent = message || "";
     }
 
-    function renderAccount() {
-      el.emojiInput.value = account.emoji || "⌨️";
-      el.nameInput.value = account.name || "ゲスト";
-      el.idInput.value = account.id || "";
-      renderExistingAccount();
+    function setSubmitting(isSubmitting) {
+      submitting = isSubmitting;
+      el.loginSubmitBtn.disabled = isSubmitting;
+      el.signupSubmitBtn.disabled = isSubmitting;
+      el.forgotPasswordBtn.disabled = isSubmitting;
     }
 
-    function renderExistingAccount() {
-      const saved = localStorage.getItem(ACCOUNT_KEY);
-      if (!saved || !account.id) {
-        el.existingAccountText.textContent = "まだアカウントがありません。下のフォームで作成するか、クラウドに保存済みのIDでログインしてください。";
-        el.loginIdInput.value = "";
-        el.loginIdInput.placeholder = "アカウントIDを入力";
-        return;
-      }
-
-      el.loginIdInput.placeholder = "アカウントIDを入力";
-      el.existingAccountText.textContent = `保存済みアカウント：${account.emoji || "⌨️"} ${account.name} / ID: ${account.id}`;
-    }
-
-    async function handleLogin() {
-      const inputId = sanitizeAccountId(el.loginIdInput.value.trim());
-      if (!inputId) {
-        setError("ログインIDを入力してください。");
-        return;
-      }
-
-      if (localStorage.getItem(ACCOUNT_KEY) && account.id && inputId === account.id) {
-        setError("");
-        localStorage.setItem(SESSION_KEY, "1");
-        window.location.href = "./typing.html";
-        return;
-      }
-
+    function showTab(tab) {
+      const isLogin = tab === "login";
+      el.loginForm.classList.toggle("hidden", !isLogin);
+      el.signupForm.classList.toggle("hidden", isLogin);
+      el.tabLoginBtn.classList.toggle("active", isLogin);
+      el.tabSignupBtn.classList.toggle("active", !isLogin);
+      el.tabLoginBtn.setAttribute("aria-selected", String(isLogin));
+      el.tabSignupBtn.setAttribute("aria-selected", String(!isLogin));
       setError("");
-      el.loginBtn.disabled = true;
-      setStatus("アカウントを確認しています…");
-
-      const cloudData = window.NikoriCloud ? await window.NikoriCloud.pullAccountData(inputId) : null;
-
-      el.loginBtn.disabled = false;
       setStatus("");
-
-      if (cloudData) {
-        loginWithAccount({
-          id: inputId,
-          name: sanitizeName(cloudData.name || "ゲスト"),
-          emoji: normalizeEmoji(cloudData.emoji || "⌨️")
-        });
-        return;
-      }
-
-      setError("ログインIDが見つかりません。登録したアカウントIDを入力するか、新規作成してください。");
     }
 
-    function handleGuestLogin() {
-      loginWithAccount({ id: "guest", name: "ゲスト", emoji: "⌨️" });
-    }
+    el.tabLoginBtn.addEventListener("click", () => showTab("login"));
+    el.tabSignupBtn.addEventListener("click", () => showTab("signup"));
 
-    function handleSave({ redirect = false } = {}) {
-      const nextAccount = buildAccountFromForm();
-      const error = validateAccount(nextAccount);
-      if (error) {
-        setError(error);
-        return false;
-      }
-
-      setError("");
-      if (redirect) {
-        loginWithAccount(nextAccount);
-        return true;
-      }
-
-      saveAccount(nextAccount);
-      syncAccountToCloud(nextAccount);
-      el.createFormWrap.classList.remove("open");
-      el.openCreateFormBtn.textContent = "アカウントを編集する";
-      setStatus("保存しました。");
-      return true;
-    }
-
-    function resetAccount() {
-      if (!confirm("アカウント情報とログイン状態をリセットします。よろしいですか？")) return;
-      localStorage.removeItem(ACCOUNT_KEY);
-      localStorage.removeItem(SESSION_KEY);
-      account = createDefaultAccount();
-      setError("");
-      renderAccount();
-      el.createFormWrap.classList.remove("open");
-      el.openCreateFormBtn.textContent = "アカウントを作成する";
-      setStatus("アカウントをリセットしました。");
-    }
-
-    el.loginBtn.addEventListener("click", handleLogin);
-    el.guestLoginBtn.addEventListener("click", handleGuestLogin);
-    el.loginIdInput.addEventListener("keydown", event => {
-      if (event.key === "Enter") handleLogin();
-    });
-
-    el.openCreateFormBtn.addEventListener("click", () => {
-      el.createFormWrap.classList.toggle("open");
-      el.openCreateFormBtn.textContent = el.createFormWrap.classList.contains("open")
-        ? "作成フォームを閉じる"
-        : (localStorage.getItem(ACCOUNT_KEY) ? "アカウントを編集する" : "アカウントを作成する");
-    });
-
-    el.form.addEventListener("submit", event => {
-      event.preventDefault();
-      handleSave({ redirect: true });
-    });
-
-    el.saveOnlyBtn.addEventListener("click", () => handleSave({ redirect: false }));
-
-    el.generateIdBtn.addEventListener("click", () => {
-      el.idInput.value = "user-" + Math.random().toString(36).slice(2, 8);
-      setStatus("新しいIDを生成しました。保存すると反映されます。");
-    });
-
-    el.resetAccountBtn.addEventListener("click", resetAccount);
-
-    document.querySelectorAll("[data-emoji]").forEach(button => {
+    document.querySelectorAll(".toggle-pass").forEach(button => {
       button.addEventListener("click", () => {
-        el.emojiInput.value = button.dataset.emoji;
+        const target = document.getElementById(button.dataset.target);
+        if (!target) return;
+        const willShow = target.type === "password";
+        target.type = willShow ? "text" : "password";
+        button.textContent = willShow ? "隠す" : "表示";
       });
     });
 
-    el.idInput.addEventListener("input", () => {
-      const pos = el.idInput.selectionStart;
-      el.idInput.value = sanitizeAccountId(el.idInput.value);
-      try { el.idInput.setSelectionRange(pos, pos); } catch {}
+    document.querySelectorAll("[data-emoji]").forEach(button => {
+      button.addEventListener("click", () => {
+        el.signupEmoji.value = button.dataset.emoji;
+      });
     });
 
-    if (localStorage.getItem(ACCOUNT_KEY)) {
-      el.openCreateFormBtn.textContent = "アカウントを編集する";
+    function normalizeEmoji(value) {
+      const text = String(value || "").trim();
+      return [...text][0] || "⌨️";
     }
 
-    renderAccount();
+    async function afterSignedIn(user) {
+      try {
+        await migrateLocalStorageIfNeeded(user.uid);
+      } catch (err) {
+        console.warn("localStorageからの移行に失敗しました。", err);
+      }
+      window.location.href = "./";
+    }
+
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      if (submitting) return;
+
+      const email = el.loginEmail.value.trim();
+      const password = el.loginPassword.value;
+
+      if (!email || !password) {
+        setError("メールアドレスとパスワードを入力してください。");
+        return;
+      }
+
+      setError("");
+      setSubmitting(true);
+      setStatus("ログインしています…");
+
+      try {
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        setStatus("ログインしました。移動しています…");
+        await afterSignedIn(credential.user);
+      } catch (err) {
+        setSubmitting(false);
+        setStatus("");
+        setError(mapAuthErrorToMessage(err));
+      }
+    }
+
+    async function handleSignupSubmit(event) {
+      event.preventDefault();
+      if (submitting) return;
+
+      const email = el.signupEmail.value.trim();
+      const password = el.signupPassword.value;
+      const displayName = el.signupName.value.trim().slice(0, 20);
+      const emoji = normalizeEmoji(el.signupEmoji.value);
+
+      if (!displayName) {
+        setError("ニックネームを入力してください。");
+        return;
+      }
+      if (!email || !password) {
+        setError("メールアドレスとパスワードを入力してください。");
+        return;
+      }
+      if (password.length < 6) {
+        setError("パスワードは6文字以上で入力してください。");
+        return;
+      }
+
+      setError("");
+      setSubmitting(true);
+      setStatus("新規登録しています…");
+
+      try {
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        try {
+          await updateProfile(credential.user, { displayName });
+        } catch (profileErr) {
+          console.warn("表示名の設定に失敗しました。", profileErr);
+        }
+        await createUserDocument(credential.user, { displayName, avatarEmoji: emoji });
+        setStatus("登録しました。移動しています…");
+        await afterSignedIn(credential.user);
+      } catch (err) {
+        setSubmitting(false);
+        setStatus("");
+        setError(mapAuthErrorToMessage(err));
+      }
+    }
+
+    async function handleForgotPassword() {
+      if (submitting) return;
+      const email = el.loginEmail.value.trim();
+      if (!email) {
+        setError("パスワード再設定メールを送るメールアドレスを、ログインの欄に入力してください。");
+        return;
+      }
+
+      setError("");
+      setSubmitting(true);
+      setStatus("パスワード再設定メールを送信しています…");
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        setStatus("パスワード再設定メールを送信しました。メールをご確認ください。");
+      } catch (err) {
+        setError(mapAuthErrorToMessage(err));
+        setStatus("");
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    el.loginForm.addEventListener("submit", handleLoginSubmit);
+    el.signupForm.addEventListener("submit", handleSignupSubmit);
+    el.forgotPasswordBtn.addEventListener("click", handleForgotPassword);
+
+    // モジュール読み込みに成功しここまで実行が到達したことを、body側の監視タイマーへ知らせます
+    // （CDN読み込み失敗など、モジュール自体が実行できないケースはbody側のタイマーが引き続き検知します）。
+    function markAuthReady() {
+      if (window.__nikoriMarkAuthReady) window.__nikoriMarkAuthReady();
+    }
+
+    try {
+      onAuthStateChanged(
+        auth,
+        user => {
+          markAuthReady();
+          if (user) {
+            // 既にログイン済みの場合はタイピング画面へ移動
+            window.location.replace("./");
+            return;
+          }
+          el.checkingBox.classList.add("hidden");
+          el.authArea.classList.remove("hidden");
+          showTab("login");
+        },
+        error => {
+          markAuthReady();
+          console.error("認証状態の確認に失敗しました。", error);
+          el.checkingBox.querySelector("p").textContent =
+            "ログイン状態の確認に失敗しました。ページを再読み込みしてください。";
+        }
+      );
+    } catch (err) {
+      markAuthReady();
+      console.error("Firebaseの初期化に失敗しました。", err);
+      el.checkingBox.querySelector("p").textContent =
+        "読み込みに失敗しました。ページを再読み込みしてください。";
+    }
   </script>
 </body>
 </html>
