@@ -442,7 +442,7 @@
                 <button type="button" class="secondary" id="generateIdBtn">ID自動生成</button>
               </div>
               <div class="split">
-                <a class="button-link secondary" href="./typing.html">タイピングへ戻る</a>
+                <a class="button-link secondary" href="./index.html">タイピングへ戻る</a>
                 <button type="button" class="danger" id="resetAccountBtn">アカウントをリセット</button>
               </div>
             </div>
@@ -508,7 +508,7 @@
     function loginWithAccount(nextAccount) {
       saveAccount(nextAccount);
       localStorage.setItem(SESSION_KEY, "1");
-      window.location.href = "./typing.html";
+      window.location.href = "./index.html";
     }
 
     function sanitizeAccountId(value) {
@@ -597,7 +597,7 @@
 
       setError("");
       localStorage.setItem(SESSION_KEY, "1");
-      window.location.href = "./typing.html";
+      window.location.href = "./index.html";
     }
 
     function handleGuestLogin() {
