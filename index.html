@@ -1848,6 +1848,10 @@
     }
 
     function openLevelIntro() {
+      if (localStorage.getItem("nikoriStewTutorialCompleted") !== "1") {
+        window.location.href = "./stew.html?mode=tutorial";
+        return;
+      }
       state.mode = "level";
       state.introIndex = 0;
       renderIntro();
@@ -2299,6 +2303,11 @@
         }
       }
 
+      if (state.mode === "level" && state.levelKind === "world"
+          && state.selectedMap === 9 && state.selectedWorld === 9 && success && accuracy >= 90) {
+        localStorage.setItem("nikoriStewPlusUnlocked", "1");
+        message = "ニコリヒト：おめでとう！君は僕の予想をはるかに超えていたよ！少し物足りなかったかな？もしそうなら＋モードに挑戦してみない？やらなくても気が向いたらいつでも挑戦しに来れるよ！バイバーイ！";
+      }
       el.resultScore.textContent = state.score;
       el.resultAccuracy.textContent = accuracy + "%";
       el.resultTyped.textContent = state.typedCount;
@@ -3258,6 +3267,13 @@
 
     document.addEventListener("keydown", handleKey);
 
+    const stewLinks = document.createElement("div");
+    stewLinks.style.cssText = "padding:12px;text-align:center";
+    stewLinks.innerHTML = '<a href="./stew.html?mode=challenge" style="margin:6px;padding:10px 18px;display:inline-block;background:#00a8d8;color:white;border-radius:12px;text-decoration:none">ビーフシチュー・タイピング</a>'
+      + (localStorage.getItem("nikoriStewPlusUnlocked") === "1"
+      ? '<a href="./stew.html?mode=plus" style="margin:6px;padding:10px 18px;display:inline-block;background:#e4a22a;color:#06354f;border-radius:12px;text-decoration:none">＋モード（つるつる君）</a>' : '')
+      + (localStorage.getItem("nikoriTypingFarEndTitle") === "最果てのタイパー" ? '<p>獲得称号：最果てのタイパー</p>' : '');
+    document.querySelector("#modeScreen")?.appendChild(stewLinks);
     setupRubyObserver();
     updateMeta();
     updateQuestList();
