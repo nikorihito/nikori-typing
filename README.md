@@ -48,7 +48,8 @@ https://nikorihito.github.io/nikori-typing/
 nikori-typing/
 ├─ index.html
 ├─ login.html
-├─ typing.html
+├─ 404.html
+├─ typing.html（旧URLからの転送）
 ├─ typing_words.js
 ├─ romaji_rules.js
 ├─ nikori-ocean-theme.css
@@ -58,9 +59,10 @@ nikori-typing/
 
 | ファイル | 内容 |
 |---|---|
-| `index.html` | 公開ページの入口 |
+| `index.html` | タイピングゲーム本体・公開ページの入口 |
 | `login.html` | ユーザー選択・ログイン画面 |
-| `typing.html` | タイピングゲーム本体 |
+| `404.html` | 存在しないURL用の案内ページ |
+| `typing.html` | 旧URLから `index.html` への転送ページ |
 | `typing_words.js` | 出題データ |
 | `romaji_rules.js` | ローマ字入力判定 |
 | `nikori-ocean-theme.css` | 共通デザイン |
