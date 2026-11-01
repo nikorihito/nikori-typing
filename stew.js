@@ -33,6 +33,8 @@ const score=Math.round((all-red)/Math.max(1,all)*100),perfect=red===0;
 $("resultTitle").textContent=score>=90?"とてもおいしいビーフシチュー！":score>=70?"おいしいビーフシチュー！":score>=40?"ちょっと味が落ちちゃった":"ビーフシチュー作りに再挑戦！";
 $("resultText").textContent="完成度 "+score+"% ／ 赤い文字 "+red+" ／ 全 "+all+" 文字";
 $("achievement").textContent=perfect?"隠しメッセージ：君相当すごいんだね！":"";
+const newTitles=window.NikoriTitles?.record("stew",{tutorial,plus,quality:score,red})||[];
+if(newTitles.length)$("achievement").textContent+="　獲得称号："+newTitles.join("、");
 if(tutorial){safeWrite(TUTORIAL,"1");$("dialogue").textContent="ニコリヒト：チュートリアル完了！次はレベルアップマップで練習しよう！";}
 if(plus){if(score>=90){safeWrite(TITLE,"最果てのタイパー");$("achievement").textContent+=" 称号獲得：最果てのタイパー！";}$("dialogue").textContent="つるつる君：＋モードに挑戦してくれてありがとう！";}
 }
