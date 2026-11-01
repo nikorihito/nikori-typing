@@ -1,0 +1,19 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>称号コレクション | ニコリタイピング</title><style>
+*{box-sizing:border-box}body{margin:0;padding:24px;font-family:"Yu Gothic",Meiryo,system-ui,sans-serif;color:#06354f;background:linear-gradient(#f5fdff,#b6f2ff);min-height:100vh}main{max-width:940px;margin:auto}header{background:#ffffffd9;padding:24px;border-radius:22px;margin-bottom:20px}a{display:inline-block;text-decoration:none;background:#00a8d8;color:white;border-radius:12px;padding:12px 18px;font-weight:bold}#grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px}article{background:white;border-radius:18px;padding:18px;border:2px solid #d9edf5;min-height:160px}article.locked{opacity:.66}article.gold{border-color:#eab94d}article.legend{border-color:#a989db;background:linear-gradient(135deg,#fff,#f6efff)}h2{font-size:1.12rem;margin:8px 0}.mark{font-size:1.7rem}.small{color:#567;font-size:.9rem;line-height:1.6}#count{font-weight:bold}button{background:#f0f7ff;border:1px solid #7db2d0;border-radius:10px;padding:9px 13px;cursor:pointer;font:inherit}#current{font-weight:bold}
+</style></head><body><main><header><h1>称号コレクション</h1><p>タイピングや料理を楽しみながら集めよう！ 未獲得の称号も条件を確認できます。</p><p id="count"></p><p id="current"></p><a href="./index.html">タイピングに戻る</a></header><div id="grid"></div></main>
+<script src="./titles.js"></script><script>
+const api=window.NikoriTitles;const data=api.syncLegacy();
+document.getElementById("count").textContent="獲得 "+Object.keys(data.unlocked).length+" / "+api.definitions.length;
+document.getElementById("current").textContent="獲得した称号は、この端末のブラウザに保存されています。";
+const grid=document.getElementById("grid");
+for(const [id,name,description,rank] of api.definitions){
+ const earned=Boolean(data.unlocked[id]);const card=document.createElement("article");
+ card.className=earned?rank:"locked";
+ const mark=document.createElement("div");mark.className="mark";mark.textContent=earned?(rank==="legend"?"🏆":rank==="gold"?"🥇":rank==="silver"?"🥈":"🥉"):"🔒";
+ const title=document.createElement("h2");title.textContent=earned?name:"未獲得："+name;
+ const desc=document.createElement("p");desc.className="small";desc.textContent=description;
+ const label=document.createElement("p");label.className="small";label.textContent=earned?"獲得済み":"チャレンジ中";
+ card.append(mark,title,desc,label);grid.appendChild(card);
+}
+</script></body></html>
