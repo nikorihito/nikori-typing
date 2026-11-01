@@ -8,7 +8,7 @@ if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId || !f
 } else {
   try {
     const base = "https://www.gstatic.com/firebasejs/13.1.0/";
-    const [{initializeApp},{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut},{getFirestore,doc,getDoc,setDoc}] = await Promise.all([
+    const [{initializeApp},{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail},{getFirestore,doc,getDoc,setDoc}] = await Promise.all([
       import(base+"firebase-app.js"),import(base+"firebase-auth.js"),import(base+"firebase-firestore.js")
     ]);
     const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);
@@ -18,7 +18,10 @@ if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId || !f
       const messages = {"auth/invalid-credential":"メールアドレスまたはパスワードを確認してください。","auth/email-already-in-use":"このメールアドレスは登録済みです。","auth/weak-password":"パスワードが短すぎます。","permission-denied":"Firestoreのアクセス権限を確認してください。"};
       status(messages[code] || "処理に失敗しました（"+code+"）。");
     };
-    $("login").disabled=false;$("register").disabled=false;
+    $("login").disabled=false;$("register").disabled=false;$("resetPassword").disabled=false;
+    $("register").addEventListener("pointerdown",()=>{$("password").setAttribute("autocomplete","new-password")});
+    $("login").addEventListener("pointerdown",()=>{$("password").setAttribute("autocomplete","current-password")});
+    $("resetPassword").addEventListener("click",async()=>{if(!$("email").reportValidity())return;try{await sendPasswordResetEmail(auth,$("email").value);status("登録済みの場合、パスワード再設定メールを送信します。")}catch(e){failure(e)}});
     onAuthStateChanged(auth,user=>{
       $("authForm").hidden=!!user;$("logout").hidden=!user;$("sync").hidden=!user;
       status(user?"ログイン中: "+user.email+"\nクラウド同期は手動操作です。":"ログインしていません。");
