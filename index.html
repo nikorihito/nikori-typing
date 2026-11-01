@@ -145,6 +145,16 @@
       justify-content: flex-end;
     }
 
+    .stew-game {display:none;margin:12px 0;padding:12px 16px;border-radius:20px;background:rgba(255,255,255,.82);border:1px solid rgba(0,168,216,.24);gap:16px;align-items:center}
+    .stew-game.active {display:flex}
+    .stew-game img {width:110px;max-width:25%;height:100px;object-fit:contain}
+    .stew-copy{flex:1;font-weight:800;font-size:1rem;line-height:1.6}
+    .stew-fresh{height:12px;border-radius:20px;background:#e4f2f6;overflow:hidden}
+    #stewFreshBar{width:100%;height:100%;background:#1ebc83;transition:width .2s}
+    .stew-letters {min-height:1.3em;font-size:1.15rem;font-weight:900;letter-spacing:.06em;word-break:break-all}
+    .stew-letters .bad{color:#da344b}
+    .stew-fly {position:fixed;pointer-events:none;z-index:99;font-weight:900;font-size:24px;animation:stew-drop .6s ease-in forwards}
+    @keyframes stew-drop{to{transform:translate(0,115px) scale(.5);opacity:0}}
     .account-pill {
       display: inline-flex;
       align-items: center;
@@ -1167,6 +1177,14 @@
             <div class="hud-card"><span>正確率</span><strong id="accuracyLabel">100%</strong></div>
           </div>
 
+          <div class="stew-game" id="stewGame" aria-label="ビーフシチューの完成度">
+            <img id="stewArt" src="./nikorihito特製ビーフシチュー.png" alt="ビーフシチュー" onerror="this.src='./ニコリヒト.png'">
+            <div class="stew-copy">
+              <div>ビーフシチューづくり <span id="stewScore">完成度 100%</span></div>
+              <div class="stew-fresh"><div id="stewFreshBar"></div></div>
+              <div class="stew-letters" id="stewLetters"></div>
+            </div>
+          </div>
           <div class="stage">
             <div class="character-mark" aria-hidden="true"></div>
             <div class="word-box">
@@ -2062,6 +2080,37 @@
       updateKeyboardGuide();
     }
 
+    const stew = {timer:null, start:0, bad:0, total:0, red:new Set(), expected:"", mode:false};
+    function stewEnabled(){return state.mode === "normal" || state.mode === "level";}
+    function stewReset(){
+      stew.mode=stewEnabled();stew.bad=0;stew.total=0;stew.red=new Set();stew.expected="";
+      document.getElementById("stewGame").classList.toggle("active",stew.mode);
+      stewRender();
+    }
+    function stewRender(){
+      if(!stew.mode)return;
+      const t=performance.now()-stew.start;
+      const limit=state.levelKind==="tutorial"?8500:state.mode==="level"?Math.max(1700,6500-state.selectedMap*450):5200;
+      if(state.running&&!state.paused&&t>limit){stew.red.add(state.typed.length);}
+      const target=bestDisplayTarget();
+      const chars=[...target];
+      document.getElementById("stewLetters").innerHTML=chars.map((c,i)=>
+        '<span class="'+(stew.red.has(i)?"bad":"")+'">'+(c===" "?"&nbsp;":escapeHtml(c))+'</span>').join("");
+      const pct=stew.total?Math.round(100*(stew.total-stew.bad)/stew.total):100;
+      document.getElementById("stewScore").textContent="完成度 "+pct+"%";
+      document.getElementById("stewFreshBar").style.width=pct+"%";
+    }
+    function stewAccept(key,wrong=false){
+      if(!stew.mode)return;
+      if(wrong){stew.red.add(state.typed.length);return;}
+      const bad=stew.red.has(state.typed.length-1);
+      stew.total++;if(bad)stew.bad++;
+      const e=document.createElement("span");e.className="stew-fly";e.textContent=key;e.style.color=bad?"#da344b":"#078769";
+      const rect=document.getElementById("stewArt").getBoundingClientRect();
+      e.style.left=(rect.left+rect.width/2)+"px";e.style.top=rect.top+"px";
+      document.body.appendChild(e);setTimeout(()=>e.remove(),650);
+    }
+    setInterval(()=>{if(stew.mode&&state.running&&!state.paused)stewRender()},250);
     function resetStats() {
       clearTimer();
       state.running = false;
@@ -2075,6 +2124,7 @@
       state.typed = "";
       state.current = null;
       state.targets = [];
+      stewReset();
     }
 
     function getWordPool() {
@@ -2153,6 +2203,7 @@
       state.current = pickWord();
       state.targets = state.current.targets.map(t => t.toLowerCase());
       state.typed = "";
+      if (stew.mode){stew.red=new Set();stew.start=performance.now();stewRender();}
       if (state.mode === "endless") {
         state.totalTime = 10;
         state.timeLeft = 10;
@@ -2230,13 +2281,17 @@
       if (state.targets.some(target => target.startsWith(candidate))) {
         state.typed = candidate;
         state.typedCount++;
+        stewAccept(key);
         renderTarget(bestDisplayTarget());
+        stewRender();
 
         if (state.targets.includes(state.typed)) {
           handleCorrectWord();
         }
       } else {
         state.mistakes++;
+        stewAccept(key,true);
+        stewRender();
         state.combo = 0;
         if (state.mode === "endless") state.timeLeft = Math.max(0, state.timeLeft - 1.5);
         if (state.mode === "level" && state.levelKind === "skip") state.timeLeft = Math.max(0, state.timeLeft - 1);
@@ -2270,6 +2325,7 @@
       state.paused = false;
 
       const accuracy = calcAccuracy();
+      const quality=stew.total?Math.round(100*(stew.total-stew.bad)/stew.total):100;
       const success = resolveLevelSuccess(accuracy);
       const earnedExp = Math.max(5, Math.floor(state.score / 20) + state.correctWords * 2 + (success ? 20 : 0));
       state.record.exp += earnedExp;
@@ -2281,6 +2337,8 @@
       saveRecord();
 
       let message = `EXP +${earnedExp}。${state.correctWords}問正解しました。`;
+      if(stew.mode)message += ` ビーフシチュー完成度 ${quality}%。`;
+      if(stew.mode && stew.bad===0 && stew.total>0)message += " 君相当すごいんだね！";
 
       if (state.mode === "level" && state.levelKind === "world") {
         if (success) {
@@ -3273,9 +3331,15 @@
 
     document.addEventListener("keydown", handleKey);
 
+    const friendNav=document.createElement("a");
+    friendNav.href="./friends.html";friendNav.textContent="フレンド";
+    friendNav.className="button-link secondary";
+    friendNav.style.cssText="order:999;white-space:nowrap";
+    const headerButtons=document.getElementById("logoutButton")?.parentElement;
+    if(headerButtons)headerButtons.appendChild(friendNav);
     const stewLinks = document.createElement("div");
     stewLinks.style.cssText = "padding:12px;text-align:center";
-    stewLinks.innerHTML = '<a href="./titles.html" style="margin:6px;padding:10px 18px;display:inline-block;background:#8056bc;color:white;border-radius:12px;text-decoration:none">称号コレクション</a><a href="./stew.html?mode=challenge" style="margin:6px;padding:10px 18px;display:inline-block;background:#00a8d8;color:white;border-radius:12px;text-decoration:none">ビーフシチュー・タイピング</a>'
+    stewLinks.innerHTML = '<a href="./titles.html" style="margin:6px;padding:10px 18px;display:inline-block;background:#8056bc;color:white;border-radius:12px;text-decoration:none">称号コレクション</a><a href="./stew.html?mode=challenge" style="margin:6px;padding:10px 18px;display:inline-block;background:#00a8d8;color:white;border-radius:12px;text-decoration:none">ビーフシチューの練習</a>'
       + (localStorage.getItem("nikoriStewPlusUnlocked") === "1"
       ? '<a href="./stew.html?mode=plus" style="margin:6px;padding:10px 18px;display:inline-block;background:#e4a22a;color:#06354f;border-radius:12px;text-decoration:none">＋モード（つるつる君）</a>' : '')
       + (localStorage.getItem("nikoriTypingFarEndTitle") === "最果てのタイパー" ? '<p>獲得称号：最果てのタイパー</p>' : '');
