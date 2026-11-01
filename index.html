@@ -2107,7 +2107,7 @@
       stew.total++;if(bad)stew.bad++;
       const e=document.createElement("span");e.className="stew-fly";e.textContent=key;e.style.color=bad?"#da344b":"#078769";
       const rect=document.getElementById("stewArt").getBoundingClientRect();
-      e.style.left=(rect.left+rect.width/2)+"px";e.style.top=rect.top+"px";
+      e.style.left=(rect.left+rect.width/2)+"px";e.style.top=(rect.top-75)+"px";
       document.body.appendChild(e);setTimeout(()=>e.remove(),650);
     }
     setInterval(()=>{if(stew.mode&&state.running&&!state.paused)stewRender()},250);
